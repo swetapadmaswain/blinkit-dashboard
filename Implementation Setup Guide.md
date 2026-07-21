@@ -1437,14 +1437,31 @@ The production data scrapers should be designed to pull approximately **2000 rev
 
 Total target: **~8000 reviews** across all platforms for comprehensive analysis.
 
-#### 10.5.3 Real Data Scrapers (To Be Implemented)
+#### 10.5.3 Real Data Scrapers
 
-Create platform-specific scrapers in `backend/app/ingestors/`:
+Platform-specific scrapers are implemented in `backend/app/ingestors/`:
 
-- `google_play_scraper.py` - Google Play Store reviews
-- `app_store_scraper.py` - Apple App Store reviews
-- `reddit_scraper.py` - Reddit discussions
-- `twitter_scraper.py` - Twitter mentions
+- `google_play_reviews_scraper.py` - Google Play Store reviews (working)
+- `app_store_reviews_scraper.py` - Apple App Store reviews (limited)
+- `reddit_scraper.py` - Reddit discussions (to be implemented)
+- `twitter_scraper.py` - Twitter mentions (to be implemented)
+
+**Google Play Store Scraper**
+- Uses `google-play-scraper` library (no API key required)
+- Successfully fetches ~2000 reviews from Blinkit app (com.blinkit.storeob)
+- Run with: `python app/ingestors/google_play_reviews_scraper.py`
+
+**Apple App Store Scraper**
+- The `app-store-scraper` library has limitations due to App Store API changes
+- May not reliably fetch reviews via web scraping
+- For production, use the official App Store Connect API (requires Apple Developer account)
+- See: https://developer.apple.com/documentation/appstoreconnectapi
+
+**Running Google Play Scraper**
+```bash
+cd backend
+python app/ingestors/google_play_reviews_scraper.py
+```
 
 Each scraper should:
 1. Fetch reviews/posts from the platform API or web scraping
