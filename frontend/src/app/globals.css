@@ -27,25 +27,25 @@
   }
 
   .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
-    --primary: 217.2 91.2% 59.8%;
-    --primary-foreground: 222.2 47.4% 11.2%;
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 224.3 76.3% 48%;
+    --background: 240 38% 8%;
+    --foreground: 0 0% 100%;
+    --card: 235 32% 13%;
+    --card-foreground: 0 0% 100%;
+    --popover: 235 32% 13%;
+    --popover-foreground: 0 0% 100%;
+    --primary: 326 100% 64%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 225 45% 19%;
+    --secondary-foreground: 0 0% 100%;
+    --muted: 225 30% 20%;
+    --muted-foreground: 221 30% 75%;
+    --accent: 43 100% 58%;
+    --accent-foreground: 240 38% 8%;
+    --destructive: 18 100% 60%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 256 40% 28%;
+    --input: 225 30% 23%;
+    --ring: 203 100% 60%;
   }
 }
 
@@ -55,5 +55,41 @@
   }
   body {
     @apply bg-background text-foreground;
+    background-image: radial-gradient(circle at 10% 8%, rgb(236 72 153 / 0.24), transparent 25%), radial-gradient(circle at 88% 12%, rgb(59 130 246 / 0.22), transparent 26%), radial-gradient(circle at 50% 100%, rgb(249 115 22 / 0.16), transparent 32%);
+    background-attachment: fixed;
   }
+}
+
+.bg-gray-900 {
+  background-color: rgb(14 16 42 / 0.94) !important;
+}
+
+.bg-gray-800 {
+  background-color: rgb(28 31 67 / 0.82) !important;
+  border-color: rgb(147 51 234 / 0.32) !important;
+}
+
+.bg-gray-700 {
+  background-color: rgb(61 69 110 / 0.62) !important;
+}
+
+.bg-gray-700\/50 {
+  background-color: rgb(61 69 110 / 0.38) !important;
+}
+
+.bg-gray-800\/50 {
+  background-color: rgb(28 31 67 / 0.5) !important;
+}
+
+.text-gray-400 {
+  color: rgb(196 203 240) !important;
+}
+
+.text-gray-500 {
+  color: rgb(154 163 209) !important;
+}
+
+::selection {
+  background: rgb(236 72 153);
+  color: white;
 }
