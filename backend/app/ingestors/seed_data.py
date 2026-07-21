@@ -116,7 +116,7 @@ def seed_mongo_data():
     db = get_mongo_db()
 
     raw_reviews = []
-    for i in range(50):
+    for _ in range(2000):
         raw_reviews.append({
             "source": random.choice(REVIEW_SOURCES),
             "source_id": f"review_{uuid.uuid4().hex[:8]}",
@@ -127,9 +127,18 @@ def seed_mongo_data():
                 "Customer care did not resolve my issue.",
                 "Out of stock again for my monthly groceries.",
                 "Great experience, will order again.",
+                "The delivery person was rude.",
+                "Order was missing items.",
+                "App is very user friendly.",
+                "Delivery took longer than expected.",
+                "Fresh vegetables always available.",
+                "Payment gateway issues.",
+                "Good packaging quality.",
+                "Customer support was helpful.",
+                "The 10-minute delivery is amazing.",
             ]),
             "rating": random.randint(1, 5),
-            "author": f"user_{random.randint(100, 999)}",
+            "author": f"user_{random.randint(100, 9999)}",
             "title": "Review",
             "platform": random.choice(PLATFORMS),
             "metadata": {"country": "IN", "language": "en"},
@@ -162,7 +171,7 @@ def seed_mongo_data():
 def seed_elasticsearch_data():
     es = get_elasticsearch_client()
     docs = []
-    for _ in range(20):
+    for _ in range(2000):
         docs.append({"index": {"_index": "reviews"}})
         docs.append({
             "content": random.choice([
@@ -170,6 +179,21 @@ def seed_elasticsearch_data():
                 "The app is slow during checkout.",
                 "Good prices but poor support.",
                 "Out of stock issues are frustrating.",
+                "Delivery was super fast today!",
+                "App crashed while applying coupon.",
+                "Prices are better than competitors.",
+                "Customer care did not resolve my issue.",
+                "Out of stock again for my monthly groceries.",
+                "Great experience, will order again.",
+                "The delivery person was rude.",
+                "Order was missing items.",
+                "App is very user friendly.",
+                "Delivery took longer than expected.",
+                "Fresh vegetables always available.",
+                "Payment gateway issues.",
+                "Good packaging quality.",
+                "Customer support was helpful.",
+                "The 10-minute delivery is amazing.",
             ]),
             "sentiment": {"score": round(random.uniform(-1, 1), 2), "label": random.choice(["positive", "neutral", "negative"])},
             "topics": [random.choice(["delivery", "pricing", "quality", "support"])],

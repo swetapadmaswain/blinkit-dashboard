@@ -1403,10 +1403,54 @@ npm run dev
 - **Frontend Dashboard**: http://localhost:3000
 - **Backend API**: http://localhost:8000
 - **API Documentation**: http://localhost:8000/docs
-- **PostgreSQL**: localhost:5432
-- **MongoDB**: localhost:27017
-- **Redis**: localhost:6379
-- **Elasticsearch**: http://localhost:9200
+- **PostgreSQL**: localhost:5433
+- **MongoDB**: localhost:27018
+- **Redis**: localhost:6380
+- **Elasticsearch**: http://localhost:9201
+
+### 10.5 Data Ingestion and Seeding
+
+#### 10.5.1 Run Seed Data Script
+
+The seed data script generates sample data for development and testing purposes:
+
+```bash
+cd backend
+
+# Run the seed data script
+python app/ingestors/seed_data.py
+```
+
+This will generate:
+- **PostgreSQL**: Data sources, categories, users, barriers, unmet needs, reports, and ingestion jobs
+- **MongoDB**: 2000 raw reviews and 30 social posts
+- **Elasticsearch**: 2000 indexed reviews with sentiment analysis
+
+#### 10.5.2 Data Scraper Requirements
+
+The production data scrapers should be designed to pull approximately **2000 reviews** from each data source:
+
+- **Google Play Store**: ~2000 Blinkit app reviews
+- **Apple App Store**: ~2000 Blinkit app reviews
+- **Reddit**: ~2000 posts/mentions from relevant subreddits
+- **Twitter**: ~2000 tweets mentioning Blinkit
+
+Total target: **~8000 reviews** across all platforms for comprehensive analysis.
+
+#### 10.5.3 Real Data Scrapers (To Be Implemented)
+
+Create platform-specific scrapers in `backend/app/ingestors/`:
+
+- `google_play_scraper.py` - Google Play Store reviews
+- `app_store_scraper.py` - Apple App Store reviews
+- `reddit_scraper.py` - Reddit discussions
+- `twitter_scraper.py` - Twitter mentions
+
+Each scraper should:
+1. Fetch reviews/posts from the platform API or web scraping
+2. Store raw data in MongoDB `raw_reviews` or `social_posts` collections
+3. Index processed data in Elasticsearch for search and analysis
+4. Log ingestion jobs in PostgreSQL for tracking
 
 ---
 
