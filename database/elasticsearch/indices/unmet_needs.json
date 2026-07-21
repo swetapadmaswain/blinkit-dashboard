@@ -1,0 +1,17 @@
+PUT /unmet_needs
+{
+  "mappings": {
+    "properties": {
+      "description": { "type": "text", "analyzer": "english" },
+      "category": { "type": "keyword" },
+      "priority_score": { "type": "float" },
+      "frequency": { "type": "integer" },
+      "impact_score": { "type": "float" },
+      "created_at": { "type": "date" }
+    }
+  },
+  "settings": {
+    "number_of_shards": 2,
+    "number_of_replicas": 1
+  }
+}

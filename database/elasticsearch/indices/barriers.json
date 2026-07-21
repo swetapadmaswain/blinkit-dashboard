@@ -1,0 +1,17 @@
+PUT /barriers
+{
+  "mappings": {
+    "properties": {
+      "type": { "type": "keyword" },
+      "description": { "type": "text" },
+      "severity_score": { "type": "float" },
+      "category": { "type": "keyword" },
+      "platform": { "type": "keyword" },
+      "created_at": { "type": "date" }
+    }
+  },
+  "settings": {
+    "number_of_shards": 2,
+    "number_of_replicas": 1
+  }
+}

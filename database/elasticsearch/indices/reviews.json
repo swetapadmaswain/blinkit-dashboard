@@ -1,0 +1,24 @@
+{
+  "mappings": {
+    "properties": {
+      "content": { "type": "text", "analyzer": "english" },
+      "sentiment": { 
+        "type": "nested",
+        "properties": {
+          "score": { "type": "float" },
+          "label": { "type": "keyword" }
+        }
+      },
+      "topics": { "type": "keyword" },
+      "categories": { "type": "keyword" },
+      "source": { "type": "keyword" },
+      "platform": { "type": "keyword" },
+      "created_at": { "type": "date" },
+      "rating": { "type": "integer" }
+    }
+  },
+  "settings": {
+    "number_of_shards": 3,
+    "number_of_replicas": 1
+  }
+}
