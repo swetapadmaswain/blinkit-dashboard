@@ -10,8 +10,11 @@ class Settings(BaseSettings):
     jwt_algorithm: str = "HS256"
     jwt_expire_minutes: int = 60
     api_rate_limit: str = "1000/minute"
-    cors_origins: List[str] = ["http://localhost:3000"]
+    cors_origins: str = "http://localhost:3001"
     log_level: str = "INFO"
+    
+    def get_cors_origins(self) -> List[str]:
+        return [origin.strip() for origin in self.cors_origins.split(',') if origin.strip()]
     
     class Config:
         env_file = ".env"
