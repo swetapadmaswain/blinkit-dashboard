@@ -1,6 +1,7 @@
 from fastapi import APIRouter
 from app.database import get_mongo_db, get_postgres_conn
 from datetime import datetime, timedelta
+from collections import Counter
 
 SEGMENT_ORDER = [
     "delivery_focused",
@@ -98,26 +99,102 @@ async def get_dashboard_data():
     cur.close()
     conn.close()
     
-    # Behavioral Analysis - Sample data from MongoDB
-    recent_reviews = list(db.raw_reviews.find().sort("created_at", -1).limit(10))
+    # Behavioral Analysis - get recent reviews (last 50 for activity feed)
+    recent_reviews = list(db.raw_reviews.find().sort("created_at", -1).limit(50))
     
-    # Calculate platform distribution
+    # Calculate platform distribution from real data
     platform_dist = db.raw_reviews.aggregate([
         {"$group": {"_id": "$platform", "count": {"$sum": 1}}},
         {"$sort": {"count": -1}}
     ])
     platform_distribution = [{"platform": doc["_id"], "count": doc["count"]} for doc in platform_dist]
     
-    # Calculate rating distribution
+    # Calculate rating distribution from real data
     rating_dist = db.raw_reviews.aggregate([
         {"$group": {"_id": "$rating", "count": {"$sum": 1}}},
         {"$sort": {"_id": 1}}
     ])
     rating_distribution = [{"rating": doc["_id"], "count": doc["count"]} for doc in rating_dist]
+    
+    # Compute real user segments from review content
+    segment_counts = Counter()
+    frustration_counts = Counter()
+    all_reviews_sample = list(db.raw_reviews.find({}, {"content": 1, "rating": 1}).limit(5000))
+    for review in all_reviews_sample:
+        content = str(review.get("content", "")).lower()
+        rating = review.get("rating")
+        segment_counts[classify_review_segment(content)] += 1
+        frustration_counts[classify_review_frustration(content, rating if isinstance(rating, int) else None)] += 1
+    
+    total_sampled = max(1, sum(segment_counts.values()))
+    user_segments = {
+        "high_exploration": round(100 * (segment_counts.get("app_first", 0) + segment_counts.get("value_seeker", 0)) / total_sampled),
+        "medium_exploration": round(100 * (segment_counts.get("grocery_planner", 0) + segment_counts.get("delivery_focused", 0)) / total_sampled),
+        "low_exploration": round(100 * segment_counts.get("general_shopper", 0) / total_sampled),
+    }
+    
+    # Compute real top frustrations from reviews
+    frustration_labels = {
+        "delivery_delay": "Delivery delays",
+        "stock_availability": "Out of stock items",
+        "order_accuracy": "Order accuracy issues",
+        "app_or_payment": "App/payment issues",
+        "customer_support": "Customer support",
+        "pricing_or_coupon": "Pricing concerns",
+        "product_quality": "Product quality",
+        "no_issue_reported": "No issue reported",
+    }
+    impact_thresholds = total_sampled * 0.1  # >10% = high, >5% = medium, else low
+    top_frustrations = []
+    for frust, count in frustration_counts.most_common():
+        if frust == "no_issue_reported":
+            continue
+        impact = "high" if count > impact_thresholds else ("medium" if count > impact_thresholds / 2 else "low")
+        top_frustrations.append({
+            "theme": frustration_labels.get(frust, frust),
+            "frequency": count,
+            "impact": impact
+        })
+    
+    # Compute average rating
+    avg_rating_result = list(db.raw_reviews.aggregate([
+        {"$group": {"_id": None, "avg": {"$avg": "$rating"}}}
+    ]))
+    avg_rating = round(avg_rating_result[0]["avg"], 1) if avg_rating_result else 0.0
+    
+    # Compute time series: reviews per day for last 30 days
+    thirty_days_ago = datetime.utcnow() - timedelta(days=30)
+    daily_counts_cursor = db.raw_reviews.aggregate([
+        {"$match": {"created_at": {"$gte": thirty_days_ago}}},
+        {"$group": {
+            "_id": {"$dateToString": {"format": "%Y-%m-%d", "date": "$created_at"}},
+            "count": {"$sum": 1},
+            "avg_rating": {"$avg": "$rating"}
+        }},
+        {"$sort": {"_id": 1}}
+    ])
+    daily_stats = {doc["_id"]: {"count": doc["count"], "avg_rating": round(doc["avg_rating"], 1)} for doc in daily_counts_cursor}
+    
+    time_series = []
+    for i in range(30):
+        day = (thirty_days_ago + timedelta(days=i)).strftime("%Y-%m-%d")
+        stats = daily_stats.get(day, {"count": 0, "avg_rating": 0})
+        time_series.append({
+            "date": day,
+            "reviews": stats["count"],
+            "avg_rating": stats["avg_rating"]
+        })
+    
+    # Reviews in last 7 days vs previous 7 days for trend
+    seven_days_ago = datetime.utcnow() - timedelta(days=7)
+    fourteen_days_ago = datetime.utcnow() - timedelta(days=14)
+    recent_7d = db.raw_reviews.count_documents({"created_at": {"$gte": seven_days_ago}})
+    prev_7d = db.raw_reviews.count_documents({"created_at": {"$gte": fourteen_days_ago, "$lt": seven_days_ago}})
+    review_trend_pct = round(((recent_7d - prev_7d) / max(1, prev_7d)) * 100, 1)
+    
     segment_frustration_crosstab = build_segment_frustration_crosstab(db)
     
     dashboard_data = {
-        # Primary Objective 1: Data Aggregation & Integration
         "data_aggregation": {
             "total_reviews": raw_reviews_count,
             "total_social_posts": social_posts_count,
@@ -126,54 +203,55 @@ async def get_dashboard_data():
             "platform_distribution": platform_distribution,
         },
         
-        # Primary Objective 2: Behavioral Analysis
         "behavioral_analysis": {
             "rating_distribution": rating_distribution,
             "recent_activity": [
                 {
-                    "content": r.get("content", "")[:100],
+                    "content": r.get("content", "")[:200],
                     "rating": r.get("rating"),
                     "platform": r.get("platform"),
                     "created_at": r.get("created_at").isoformat() if r.get("created_at") else None
                 }
                 for r in recent_reviews
             ],
-            "user_segments": {
-                "high_exploration": 35,
-                "medium_exploration": 45,
-                "low_exploration": 20
-            },
-            "segment_frustration_crosstab": segment_frustration_crosstab
+            "user_segments": user_segments,
+            "segment_frustration_crosstab": segment_frustration_crosstab,
+            "avg_rating": avg_rating,
+            "time_series": time_series,
         },
         
-        # Primary Objective 3: Insight Generation
         "insight_generation": {
             "barriers": barriers,
             "unmet_needs": unmet_needs,
-            "top_frustrations": [
-                {"theme": "Delivery delays", "frequency": 234, "impact": "high"},
-                {"theme": "Out of stock", "frequency": 189, "impact": "high"},
-                {"theme": "App crashes", "frequency": 156, "impact": "medium"},
-                {"theme": "Customer support", "frequency": 134, "impact": "medium"},
-                {"theme": "Pricing", "frequency": 98, "impact": "low"}
-            ]
+            "top_frustrations": top_frustrations[:8]
         },
         
-        # Primary Objective 4: Question Answering
+        "metrics": {
+            "review_trend_pct": review_trend_pct,
+            "recent_7d": recent_7d,
+            "prev_7d": prev_7d,
+            "avg_rating": avg_rating,
+            "total_barriers": len(barriers),
+            "total_unmet_needs": len(unmet_needs),
+            "total_frustrations": sum(frustration_counts.values()) - frustration_counts.get("no_issue_reported", 0),
+            "segment_distribution": dict(segment_counts),
+        },
+        
         "question_answers": {
-            "why_repeat_purchases": "Users primarily repeat purchases from the same categories due to habit formation (67%), convenience (22%), and satisfaction with current selection (11%)",
-            "barriers_to_exploration": "Top barriers: Price sensitivity (34%), Trust issues (28%), Information gaps (24%), Convenience concerns (14%)",
+            "why_repeat_purchases": f"Users primarily repeat purchases due to habit formation ({user_segments.get('low_exploration', 20)}% low exploration), convenience-seeking ({user_segments.get('medium_exploration', 45)}% medium exploration), and active exploration ({user_segments.get('high_exploration', 35)}% high exploration)",
+            "barriers_to_exploration": f"Top barriers from {len(barriers)} detected: " + ", ".join(f"{b['type']} (severity {b['severity']})" for b in barriers[:4]) if barriers else "No barriers detected yet",
             "discovery_methods": "Users discover products through: App recommendations (45%), Search (30%), Social media (15%), Word of mouth (10%)",
-            "habit_impact": "Habits account for 58% of repeat purchases, with average habit strength of 7.2/10",
+            "habit_impact": f"Based on {raw_reviews_count} reviews, habits account for {user_segments.get('low_exploration', 20) + user_segments.get('medium_exploration', 45)}% of purchase behavior",
             "information_needs": "Before trying new categories, users need: Price comparison (42%), Quality reviews (38%), Usage examples (12%), Return policy (8%)",
-            "recurring_frustrations": "Most common: Delivery timing (31%), Stock availability (27%), App performance (18%), Customer service (14%), Pricing (10%)",
-            "experimental_segments": "High propensity users are 2.3x more likely to try new categories, primarily aged 25-34, urban dwellers",
-            "unmet_needs": "Consistent needs: Faster delivery in tier-2 cities, Organic/gourmet selection, Transparent tracking, Subscription options"
+            "recurring_frustrations": "Most common: " + ", ".join(f"{f['theme']} ({f['frequency']})" for f in top_frustrations[:5]) if top_frustrations else "No frustrations detected yet",
+            "experimental_segments": f"High exploration users ({user_segments.get('high_exploration', 0)}%) are more likely to try new categories. Based on {total_sampled} analyzed reviews.",
+            "unmet_needs": f"{len(unmet_needs)} unmet needs identified: " + ", ".join(n['description'][:50] for n in unmet_needs[:4]) if unmet_needs else "No unmet needs detected yet"
         },
         
         "metadata": {
             "last_updated": datetime.utcnow().isoformat(),
-            "data_freshness": "real-time"
+            "data_freshness": "real-time",
+            "reviews_analyzed": total_sampled,
         }
     }
     
