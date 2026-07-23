@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.config import settings
-from app.api.v1 import data, barriers, needs
+from app.api.v1 import data, barriers, needs, ingest
 
 app = FastAPI(
     title="AI-Powered Discovery Engine API",
@@ -21,6 +21,7 @@ app.add_middleware(
 app.include_router(data.router, prefix="/api/v1/data", tags=["data"])
 app.include_router(barriers.router, prefix="/api/v1/barriers", tags=["barriers"])
 app.include_router(needs.router, prefix="/api/v1/needs", tags=["needs"])
+app.include_router(ingest.router, prefix="/api/v1/ingest", tags=["ingest"])
 
 @app.get("/")
 async def root():
