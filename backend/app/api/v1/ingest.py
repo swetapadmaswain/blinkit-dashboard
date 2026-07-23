@@ -3,79 +3,86 @@ from app.ingestors.google_play_reviews_scraper import scrape_google_play_reviews
 from app.ingestors.app_store_reviews_scraper import scrape_app_store_reviews
 from app.database import get_mongo_db
 import google_play_scraper as gps
+import threading
 
 router = APIRouter()
 
-@router.post("/trigger")
-@router.get("/trigger")
-async def trigger_ingestion():
-    """Trigger review ingestion from all sources - runs synchronously"""
+
+def run_ingestion_background(batch_size=5000):
+    """Run ingestion in background thread to avoid request timeout"""
+    from datetime import datetime
     db = get_mongo_db()
-    google_error = None
-    app_error = None
     
-    # Scrape Google Play reviews (fetch latest 5000)
+    # Scrape Google Play reviews (Blinkit main app)
     try:
-        google_play_reviews = scrape_google_play_reviews(count=5000)
-        google_count = 0
+        google_play_reviews = scrape_google_play_reviews(count=batch_size)
         for review in google_play_reviews:
-            existing = db.raw_reviews.find_one({
-                'source_id': review.get('source_id')
-            })
+            existing = db.raw_reviews.find_one({'source_id': review.get('source_id')})
             if not existing:
                 db.raw_reviews.insert_one(review)
-                google_count += 1
     except Exception as e:
-        google_count = 0
-        google_error = str(e)
+        print(f"Google Play error: {e}")
     
     # Scrape App Store reviews
     try:
         app_store_reviews = scrape_app_store_reviews(count=100)
-        app_count = 0
         for review in app_store_reviews:
-            existing = db.raw_reviews.find_one({
-                'source_id': review.get('source_id')
-            })
+            existing = db.raw_reviews.find_one({'source_id': review.get('source_id')})
             if not existing:
                 db.raw_reviews.insert_one(review)
-                app_count += 1
     except Exception as e:
-        app_count = 0
-        app_error = str(e)
+        print(f"App Store error: {e}")
     
-    # Also scrape Blinkit Instant (second Google Play app)
-    blinkit_instant_error = None
+    # Scrape Blinkit/Grofers app
     try:
-        blinkit_instant_reviews = scrape_blinkit_instant(count=5000)
-        instant_count = 0
-        for review in blinkit_instant_reviews:
-            existing = db.raw_reviews.find_one({
-                'source_id': review.get('source_id')
-            })
+        grofers_reviews = scrape_blinkit_grofers(count=batch_size)
+        for review in grofers_reviews:
+            existing = db.raw_reviews.find_one({'source_id': review.get('source_id')})
             if not existing:
                 db.raw_reviews.insert_one(review)
-                instant_count += 1
     except Exception as e:
-        instant_count = 0
-        blinkit_instant_error = str(e)
+        print(f"Grofers error: {e}")
     
-    total_in_db = db.raw_reviews.count_documents({})
+    total = db.raw_reviews.count_documents({})
+    print(f"✅ Background ingestion complete. Total reviews in DB: {total}")
+
+
+@router.post("/trigger")
+@router.get("/trigger")
+async def trigger_ingestion():
+    """Trigger review ingestion in background thread to avoid timeout"""
+    db = get_mongo_db()
+    total_before = db.raw_reviews.count_documents({})
+    
+    # Start ingestion in background thread
+    thread = threading.Thread(target=run_ingestion_background, args=(5000,))
+    thread.daemon = True
+    thread.start()
     
     return {
-        "message": "Ingestion completed",
-        "google_play_reviews_ingested": google_count,
-        "google_play_error": google_error,
-        "app_store_reviews_ingested": app_count,
-        "app_store_error": app_error,
-        "blinkit_instant_reviews_ingested": instant_count,
-        "blinkit_instant_error": blinkit_instant_error,
-        "total_reviews_in_db": total_in_db
+        "message": "Ingestion started in background (will take a few minutes)",
+        "total_reviews_before": total_before,
+        "note": "Check /api/v1/ingest/status for progress"
     }
 
 
-def scrape_blinkit_instant(count=200):
-    """Scrape reviews from Blinkit's alternate Google Play listing"""
+@router.get("/status")
+async def ingestion_status():
+    """Check current review count in database"""
+    db = get_mongo_db()
+    total = db.raw_reviews.count_documents({})
+    google_play = db.raw_reviews.count_documents({"platform": "google_play"})
+    app_store = db.raw_reviews.count_documents({"platform": "app_store"})
+    
+    return {
+        "total_reviews": total,
+        "google_play_reviews": google_play,
+        "app_store_reviews": app_store
+    }
+
+
+def scrape_blinkit_grofers(count=5000):
+    """Scrape reviews from Blinkit's original Grofers Google Play listing"""
     from datetime import datetime
     
     fetched_reviews = []
@@ -84,7 +91,7 @@ def scrape_blinkit_instant(count=200):
     while len(fetched_reviews) < count:
         batch_size = min(200, count - len(fetched_reviews))
         result = gps.reviews(
-            "com.grofers.customerapp",  # Blinkit's original app ID
+            "com.grofers.customerapp",
             lang='en',
             country='in',
             sort=gps.Sort.NEWEST,
