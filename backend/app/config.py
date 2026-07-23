@@ -14,7 +14,11 @@ class Settings(BaseSettings):
     log_level: str = "INFO"
     
     def get_cors_origins(self) -> List[str]:
-        return [origin.strip() for origin in self.cors_origins.split(',') if origin.strip()]
+        origins = [origin.strip() for origin in self.cors_origins.split(',') if origin.strip()]
+        # If "*" is in the list, return it to allow all origins
+        if "*" in origins:
+            return ["*"]
+        return origins
     
     class Config:
         env_file = ".env"
