@@ -1,6 +1,7 @@
 """
 Initialize PostgreSQL database schema for Blinkit dashboard
 Run this script after database creation to set up required tables
+MongoDB is populated by scheduled Celery ingestion tasks
 """
 import psycopg2
 from psycopg2.extras import RealDictCursor
@@ -96,8 +97,9 @@ def init_database():
         """)
         
         conn.commit()
-        print("✅ Database schema initialized successfully")
-        print("✅ Sample data inserted")
+        print("✅ PostgreSQL schema initialized successfully")
+        print("✅ PostgreSQL sample data inserted")
+        print("ℹ️  MongoDB will be populated by scheduled ingestion tasks")
         
     except Exception as e:
         conn.rollback()
