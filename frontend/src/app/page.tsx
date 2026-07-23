@@ -14,6 +14,7 @@ import RankedBarChart from '@/components/RankedBarChart';
 import SegmentFrustrationCrosstab from '@/components/SegmentFrustrationCrosstab';
 import ArchitectureDiagram from '@/components/ArchitectureDiagram';
 import TrendAnalysis from '@/components/TrendAnalysis';
+import { BarChart, Bar, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { 
   MessageSquare, 
   Users, 
@@ -513,7 +514,6 @@ export default function Home() {
             const totalReviews = dashboardData.data_aggregation.total_reviews || 1;
             const avgRating = dashboardData.metrics.avg_rating;
             const totalFrustrations = frustrations.reduce((s, f) => s + f.frequency, 0);
-            const maxSeverity = Math.max(...barriers.map(b => b.severity), 1);
 
             return (
             <div className="space-y-6">
@@ -562,50 +562,50 @@ export default function Home() {
                 </div>
               </div>
 
-              {/* Product Barrier Matrix */}
-              <div className="bg-gradient-to-br from-[#211a52]/95 via-[#1a1d4c]/95 to-[#381542]/95 border border-orange-400/30 rounded-xl p-6 shadow-xl">
-                <h3 className="text-lg font-semibold text-white mb-1">Product Barrier Matrix</h3>
-                <p className="text-xs text-gray-500 mb-5">Severity vs platform impact for each adoption barrier</p>
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="border-b border-gray-700">
-                        <th className="text-left py-3 px-4 text-gray-400 font-medium">Barrier</th>
-                        <th className="text-left py-3 px-4 text-gray-400 font-medium">Description</th>
-                        <th className="text-center py-3 px-4 text-gray-400 font-medium">Severity</th>
-                        <th className="text-center py-3 px-4 text-gray-400 font-medium">Platform</th>
-                        <th className="text-center py-3 px-4 text-gray-400 font-medium">Priority</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {barriers.sort((a, b) => b.severity - a.severity).map((barrier, idx) => {
-                        const priority = barrier.severity >= 8 ? 'Critical' : barrier.severity >= 6 ? 'High' : barrier.severity >= 4 ? 'Medium' : 'Low';
-                        const priorityColor = barrier.severity >= 8 ? 'rose' : barrier.severity >= 6 ? 'orange' : barrier.severity >= 4 ? 'yellow' : 'green';
-                        return (
-                          <tr key={idx} className="border-b border-gray-800 hover:bg-white/5 transition-colors">
-                            <td className="py-3 px-4 text-white font-semibold capitalize">{barrier.type.replace(/_/g, ' ')}</td>
-                            <td className="py-3 px-4 text-gray-400 text-xs max-w-xs">{barrier.description}</td>
-                            <td className="py-3 px-4 text-center">
-                              <div className="flex items-center justify-center gap-1.5">
-                                <div className="w-16 h-2 bg-gray-800 rounded-full overflow-hidden">
-                                  <div className={`h-full rounded-full ${barrier.severity >= 8 ? 'bg-rose-500' : barrier.severity >= 6 ? 'bg-orange-500' : barrier.severity >= 4 ? 'bg-yellow-500' : 'bg-green-500'}`} style={{ width: `${(barrier.severity / maxSeverity) * 100}%` }} />
-                                </div>
-                                <span className="text-xs text-gray-300 font-mono w-6">{barrier.severity}</span>
-                              </div>
-                            </td>
-                            <td className="py-3 px-4 text-center">
-                              <span className="text-[10px] px-2 py-1 rounded-full bg-blue-500/20 text-blue-300 capitalize">{barrier.platform}</span>
-                            </td>
-                            <td className="py-3 px-4 text-center">
-                              <span className={`text-[10px] px-2 py-1 rounded-full bg-${priorityColor}-500/20 text-${priorityColor}-300 font-bold`}>{priority}</span>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
+              {/* Barrier Severity Chart — deduplicated Recharts bar chart */}
+              {(() => {
+                const dedupMap = new Map<string, { severity: number; description: string; platform: string }>();
+                barriers.forEach(b => {
+                  const key = b.type.toLowerCase().replace(/_/g, ' ');
+                  const existing = dedupMap.get(key);
+                  if (!existing || b.severity > existing.severity) {
+                    dedupMap.set(key, { severity: b.severity, description: b.description, platform: b.platform });
+                  }
+                });
+                const chartData = Array.from(dedupMap.entries())
+                  .map(([name, v]) => ({ name: name.charAt(0).toUpperCase() + name.slice(1), severity: v.severity, description: v.description, platform: v.platform }))
+                  .sort((a, b) => b.severity - a.severity);
+
+                return (
+                  <div className="bg-gradient-to-br from-[#211a52]/95 via-[#1a1d4c]/95 to-[#381542]/95 border border-orange-400/30 rounded-xl p-6 shadow-xl">
+                    <h3 className="text-lg font-semibold text-white mb-1">Barrier Severity Chart</h3>
+                    <p className="text-xs text-gray-500 mb-4">{chartData.length} unique barriers ranked by severity (deduplicated)</p>
+                    <div style={{ width: '100%', height: Math.max(250, chartData.length * 48) }}>
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={chartData} layout="vertical" margin={{ top: 5, right: 30, left: 10, bottom: 5 }}>
+                          <CartesianGrid strokeDasharray="3 3" stroke="#374151" horizontal={false} />
+                          <XAxis type="number" domain={[0, 10]} tick={{ fill: '#9CA3AF', fontSize: 11 }} axisLine={{ stroke: '#4B5563' }} tickLine={false} label={{ value: 'Severity (0–10)', position: 'insideBottom', offset: -2, fill: '#6B7280', fontSize: 11 }} />
+                          <YAxis type="category" dataKey="name" width={130} tick={{ fill: '#E5E7EB', fontSize: 12 }} axisLine={false} tickLine={false} />
+                          <Tooltip
+                            contentStyle={{ backgroundColor: '#1F2937', border: '1px solid #4B5563', borderRadius: 8, fontSize: 12 }}
+                            labelStyle={{ color: '#F9FAFB', fontWeight: 600, marginBottom: 4 }}
+                            itemStyle={{ color: '#D1D5DB' }}
+                            formatter={(value: number, _name: string, props: any) => {
+                              const item = props.payload;
+                              return [`Severity: ${value}/10  |  Platform: ${item.platform}`, item.description];
+                            }}
+                          />
+                          <Bar dataKey="severity" radius={[0, 6, 6, 0]} barSize={24}>
+                            {chartData.map((entry, index) => (
+                              <Cell key={index} fill={entry.severity >= 8 ? '#F87171' : entry.severity >= 6 ? '#FB923C' : entry.severity >= 4 ? '#FACC15' : '#34D399'} />
+                            ))}
+                          </Bar>
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </div>
+                );
+              })()}
 
               {/* Rating vs Frustration Correlation */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -1079,105 +1079,6 @@ export default function Home() {
             />
           )}
 
-          {/* Settings Tab */}
-          {activeTab === 'settings' && (
-            <div className="space-y-6">
-              {/* Header */}
-              <div>
-                <h2 className="text-2xl font-bold text-white mb-1">Settings</h2>
-                <p className="text-sm text-gray-400">Dashboard configuration &amp; system information</p>
-              </div>
-
-              {/* Data Source Status */}
-              <div className="bg-gradient-to-br from-[#211a52]/95 via-[#1a1d4c]/95 to-[#381542]/95 border border-cyan-400/30 rounded-xl p-6 shadow-xl">
-                <h3 className="text-lg font-semibold text-white mb-4">Data Sources</h3>
-                <div className="space-y-3">
-                  {dashboardData.data_aggregation.data_sources.map((src, i) => (
-                    <div key={i} className="flex items-center justify-between rounded-lg border border-white/10 bg-white/5 px-4 py-3">
-                      <div className="flex items-center gap-3">
-                        <span className={`w-2.5 h-2.5 rounded-full ${src.status === 'active' ? 'bg-emerald-400 animate-pulse' : 'bg-gray-500'}`} />
-                        <div>
-                          <p className="text-sm text-white font-medium">{src.name}</p>
-                          <p className="text-xs text-gray-500 capitalize">{src.type}</p>
-                        </div>
-                      </div>
-                      <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${src.status === 'active' ? 'bg-emerald-500/20 text-emerald-300' : 'bg-gray-600/30 text-gray-400'}`}>
-                        {src.status}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* System Metrics */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                {[
-                  { label: 'Total Reviews', value: dashboardData.data_aggregation.total_reviews.toLocaleString(), color: 'cyan' },
-                  { label: 'Avg Rating', value: dashboardData.metrics.avg_rating.toFixed(2), color: 'yellow' },
-                  { label: 'Data Freshness', value: dashboardData.metadata.data_freshness, color: 'emerald' },
-                  { label: 'Last Updated', value: new Date(dashboardData.metadata.last_updated).toLocaleString(), color: 'pink' },
-                ].map((stat, i) => (
-                  <div key={i} className={`rounded-xl border-2 border-${stat.color}-500/30 bg-${stat.color}-500/10 p-4`}>
-                    <p className="text-xs text-gray-400 mb-1">{stat.label}</p>
-                    <p className={`text-lg font-bold text-${stat.color}-400`}>{stat.value}</p>
-                  </div>
-                ))}
-              </div>
-
-              {/* API Configuration */}
-              <div className="bg-gradient-to-br from-[#211a52]/95 via-[#1a1d4c]/95 to-[#381542]/95 border border-blue-400/30 rounded-xl p-6 shadow-xl">
-                <h3 className="text-lg font-semibold text-white mb-4">API Configuration</h3>
-                <div className="space-y-3">
-                  {[
-                    { label: 'Backend API', value: '/api/v1/data/dashboard', status: 'connected' },
-                    { label: 'Ingestion Endpoint', value: '/api/v1/ingest/trigger', status: 'available' },
-                    { label: 'API Docs', value: '/docs (Swagger UI)', status: 'available' },
-                  ].map((cfg, i) => (
-                    <div key={i} className="flex items-center justify-between rounded-lg border border-white/10 bg-white/5 px-4 py-3">
-                      <div>
-                        <p className="text-sm text-white font-medium">{cfg.label}</p>
-                        <p className="text-xs text-gray-500 font-mono">{cfg.value}</p>
-                      </div>
-                      <span className="text-xs px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-300 font-medium">{cfg.status}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Categories */}
-              <div className="bg-gradient-to-br from-[#211a52]/95 via-[#1a1d4c]/95 to-[#381542]/95 border border-violet-400/30 rounded-xl p-6 shadow-xl">
-                <h3 className="text-lg font-semibold text-white mb-4">Insight Categories</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  {dashboardData.data_aggregation.categories.map((cat, i) => (
-                    <div key={i} className="rounded-lg border border-white/10 bg-white/5 px-4 py-3">
-                      <p className="text-sm text-white font-medium capitalize">{cat.name}</p>
-                      <p className="text-xs text-gray-500 mt-1">{cat.description}</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* About */}
-              <div className="bg-gradient-to-br from-[#211a52]/95 via-[#1a1d4c]/95 to-[#381542]/95 border border-orange-400/30 rounded-xl p-6 shadow-xl">
-                <h3 className="text-lg font-semibold text-white mb-3">About</h3>
-                <div className="space-y-2 text-sm text-gray-400">
-                  <p><span className="text-white font-medium">Project:</span> Blinkit AI-Powered Discovery Engine</p>
-                  <p><span className="text-white font-medium">Frontend:</span> Next.js 14 · React 18 · TailwindCSS · Recharts</p>
-                  <p><span className="text-white font-medium">Backend:</span> FastAPI · Python 3.11 · MongoDB Atlas · PostgreSQL</p>
-                  <p><span className="text-white font-medium">Hosting:</span> Vercel (frontend) · Render (backend + DBs)</p>
-                  <p><span className="text-white font-medium">Reviews Analyzed:</span> {dashboardData.metadata.reviews_analyzed.toLocaleString()}</p>
-                </div>
-                <div className="mt-4 flex gap-3">
-                  <a href="https://github.com/swetapadmaswain/blinkit-dashboard" target="_blank" rel="noreferrer" className="text-xs px-3 py-1.5 rounded-lg bg-white/10 text-gray-300 hover:bg-white/20 transition-colors">
-                    GitHub Repository
-                  </a>
-                  <a href="https://blinkit-backend-9jtp.onrender.com/docs" target="_blank" rel="noreferrer" className="text-xs px-3 py-1.5 rounded-lg bg-white/10 text-gray-300 hover:bg-white/20 transition-colors">
-                    API Documentation
-                  </a>
-                </div>
-              </div>
-            </div>
-          )}
         </div>
       </div>
     </div>
