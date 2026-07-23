@@ -13,10 +13,9 @@ async def trigger_ingestion():
     
     # Scrape Google Play reviews
     try:
-        google_play_reviews = scrape_google_play_reviews("com.blinkit", max_reviews=100)
+        google_play_reviews = scrape_google_play_reviews(count=100)
         google_count = 0
         for review in google_play_reviews:
-            review['platform'] = 'google_play'
             existing = db.raw_reviews.find_one({
                 'content': review.get('content'),
                 'platform': 'google_play'
