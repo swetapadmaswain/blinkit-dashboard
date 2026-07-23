@@ -29,10 +29,9 @@ async def trigger_ingestion():
     
     # Scrape App Store reviews
     try:
-        app_store_reviews = scrape_app_store_reviews("Blinkit", max_reviews=100)
+        app_store_reviews = scrape_app_store_reviews(count=100)
         app_count = 0
         for review in app_store_reviews:
-            review['platform'] = 'app_store'
             existing = db.raw_reviews.find_one({
                 'content': review.get('content'),
                 'platform': 'app_store'
