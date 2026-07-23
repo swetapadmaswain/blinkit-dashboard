@@ -127,28 +127,33 @@ export default function Home() {
     })));
   }; 
 
-  // Generate scatter plot data
+  // Generate scatter plot data based on actual review count
   const generateScatterData = (scale: number) => {
     const categories = ['high', 'medium', 'low'];
-    const total = Math.round(50 * scale);
+    const reviewTotal = dashboardData?.data_aggregation?.total_reviews || 50;
+    const total = Math.max(10, Math.round(Math.min(reviewTotal / 10, 200) * scale));
     return Array.from({ length: total }, (_, index) => ({
-      x: (index * 17) % 100,
-      y: (index * 29) % 100,
-      z: 10 + ((index * 7) % 50),
+      x: (index * 17 + Math.floor(reviewTotal / 3)) % 100,
+      y: (index * 29 + Math.floor(reviewTotal / 7)) % 100,
+      z: Math.round((10 + ((index * 7) % 50)) * (1 + reviewTotal / 500)),
       name: `User ${index + 1}`,
       category: categories[index % categories.length],
     }));
   };
 
-  // Generate grouped bar chart data
-  const generateGroupedBarData = (scale: number) => [
-    { category: 'Delivery Speed', 'Current Users': Math.round(85 * scale), 'New Users': Math.round(70 * scale), 'Churned Users': Math.round(45 * scale) },
-    { category: 'Product Quality', 'Current Users': Math.round(90 * scale), 'New Users': Math.round(75 * scale), 'Churned Users': Math.round(50 * scale) },
-    { category: 'App Experience', 'Current Users': Math.round(75 * scale), 'New Users': Math.round(80 * scale), 'Churned Users': Math.round(60 * scale) },
-    { category: 'Customer Support', 'Current Users': Math.round(70 * scale), 'New Users': Math.round(65 * scale), 'Churned Users': Math.round(55 * scale) },
-    { category: 'Pricing', 'Current Users': Math.round(80 * scale), 'New Users': Math.round(85 * scale), 'Churned Users': Math.round(40 * scale) },
-    { category: 'Variety', 'Current Users': Math.round(88 * scale), 'New Users': Math.round(72 * scale), 'Churned Users': Math.round(48 * scale) },
-  ];
+  // Generate grouped bar chart data scaled by actual review count
+  const generateGroupedBarData = (scale: number) => {
+    const reviewTotal = dashboardData?.data_aggregation?.total_reviews || 100;
+    const reviewFactor = Math.max(1, reviewTotal / 100);
+    return [
+      { category: 'Delivery Speed', 'Current Users': Math.round(85 * scale * reviewFactor), 'New Users': Math.round(70 * scale * reviewFactor), 'Churned Users': Math.round(45 * scale * reviewFactor) },
+      { category: 'Product Quality', 'Current Users': Math.round(90 * scale * reviewFactor), 'New Users': Math.round(75 * scale * reviewFactor), 'Churned Users': Math.round(50 * scale * reviewFactor) },
+      { category: 'App Experience', 'Current Users': Math.round(75 * scale * reviewFactor), 'New Users': Math.round(80 * scale * reviewFactor), 'Churned Users': Math.round(60 * scale * reviewFactor) },
+      { category: 'Customer Support', 'Current Users': Math.round(70 * scale * reviewFactor), 'New Users': Math.round(65 * scale * reviewFactor), 'Churned Users': Math.round(55 * scale * reviewFactor) },
+      { category: 'Pricing', 'Current Users': Math.round(80 * scale * reviewFactor), 'New Users': Math.round(85 * scale * reviewFactor), 'Churned Users': Math.round(40 * scale * reviewFactor) },
+      { category: 'Variety', 'Current Users': Math.round(88 * scale * reviewFactor), 'New Users': Math.round(72 * scale * reviewFactor), 'Churned Users': Math.round(48 * scale * reviewFactor) },
+    ];
+  };
 
   // Generate trend analysis data
   const generateTrendData = () => {
