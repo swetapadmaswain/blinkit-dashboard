@@ -1078,6 +1078,106 @@ export default function Home() {
               categoryCount={dashboardData.data_aggregation.categories.length}
             />
           )}
+
+          {/* Settings Tab */}
+          {activeTab === 'settings' && (
+            <div className="space-y-6">
+              {/* Header */}
+              <div>
+                <h2 className="text-2xl font-bold text-white mb-1">Settings</h2>
+                <p className="text-sm text-gray-400">Dashboard configuration &amp; system information</p>
+              </div>
+
+              {/* Data Source Status */}
+              <div className="bg-gradient-to-br from-[#211a52]/95 via-[#1a1d4c]/95 to-[#381542]/95 border border-cyan-400/30 rounded-xl p-6 shadow-xl">
+                <h3 className="text-lg font-semibold text-white mb-4">Data Sources</h3>
+                <div className="space-y-3">
+                  {dashboardData.data_aggregation.data_sources.map((src, i) => (
+                    <div key={i} className="flex items-center justify-between rounded-lg border border-white/10 bg-white/5 px-4 py-3">
+                      <div className="flex items-center gap-3">
+                        <span className={`w-2.5 h-2.5 rounded-full ${src.status === 'active' ? 'bg-emerald-400 animate-pulse' : 'bg-gray-500'}`} />
+                        <div>
+                          <p className="text-sm text-white font-medium">{src.name}</p>
+                          <p className="text-xs text-gray-500 capitalize">{src.type}</p>
+                        </div>
+                      </div>
+                      <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${src.status === 'active' ? 'bg-emerald-500/20 text-emerald-300' : 'bg-gray-600/30 text-gray-400'}`}>
+                        {src.status}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* System Metrics */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                {[
+                  { label: 'Total Reviews', value: dashboardData.data_aggregation.total_reviews.toLocaleString(), color: 'cyan' },
+                  { label: 'Avg Rating', value: dashboardData.metrics.avg_rating.toFixed(2), color: 'yellow' },
+                  { label: 'Data Freshness', value: dashboardData.metadata.data_freshness, color: 'emerald' },
+                  { label: 'Last Updated', value: new Date(dashboardData.metadata.last_updated).toLocaleString(), color: 'pink' },
+                ].map((stat, i) => (
+                  <div key={i} className={`rounded-xl border-2 border-${stat.color}-500/30 bg-${stat.color}-500/10 p-4`}>
+                    <p className="text-xs text-gray-400 mb-1">{stat.label}</p>
+                    <p className={`text-lg font-bold text-${stat.color}-400`}>{stat.value}</p>
+                  </div>
+                ))}
+              </div>
+
+              {/* API Configuration */}
+              <div className="bg-gradient-to-br from-[#211a52]/95 via-[#1a1d4c]/95 to-[#381542]/95 border border-blue-400/30 rounded-xl p-6 shadow-xl">
+                <h3 className="text-lg font-semibold text-white mb-4">API Configuration</h3>
+                <div className="space-y-3">
+                  {[
+                    { label: 'Backend API', value: '/api/v1/data/dashboard', status: 'connected' },
+                    { label: 'Ingestion Endpoint', value: '/api/v1/ingest/trigger', status: 'available' },
+                    { label: 'API Docs', value: '/docs (Swagger UI)', status: 'available' },
+                  ].map((cfg, i) => (
+                    <div key={i} className="flex items-center justify-between rounded-lg border border-white/10 bg-white/5 px-4 py-3">
+                      <div>
+                        <p className="text-sm text-white font-medium">{cfg.label}</p>
+                        <p className="text-xs text-gray-500 font-mono">{cfg.value}</p>
+                      </div>
+                      <span className="text-xs px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-300 font-medium">{cfg.status}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Categories */}
+              <div className="bg-gradient-to-br from-[#211a52]/95 via-[#1a1d4c]/95 to-[#381542]/95 border border-violet-400/30 rounded-xl p-6 shadow-xl">
+                <h3 className="text-lg font-semibold text-white mb-4">Insight Categories</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {dashboardData.data_aggregation.categories.map((cat, i) => (
+                    <div key={i} className="rounded-lg border border-white/10 bg-white/5 px-4 py-3">
+                      <p className="text-sm text-white font-medium capitalize">{cat.name}</p>
+                      <p className="text-xs text-gray-500 mt-1">{cat.description}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* About */}
+              <div className="bg-gradient-to-br from-[#211a52]/95 via-[#1a1d4c]/95 to-[#381542]/95 border border-orange-400/30 rounded-xl p-6 shadow-xl">
+                <h3 className="text-lg font-semibold text-white mb-3">About</h3>
+                <div className="space-y-2 text-sm text-gray-400">
+                  <p><span className="text-white font-medium">Project:</span> Blinkit AI-Powered Discovery Engine</p>
+                  <p><span className="text-white font-medium">Frontend:</span> Next.js 14 · React 18 · TailwindCSS · Recharts</p>
+                  <p><span className="text-white font-medium">Backend:</span> FastAPI · Python 3.11 · MongoDB Atlas · PostgreSQL</p>
+                  <p><span className="text-white font-medium">Hosting:</span> Vercel (frontend) · Render (backend + DBs)</p>
+                  <p><span className="text-white font-medium">Reviews Analyzed:</span> {dashboardData.metadata.reviews_analyzed.toLocaleString()}</p>
+                </div>
+                <div className="mt-4 flex gap-3">
+                  <a href="https://github.com/swetapadmaswain/blinkit-dashboard" target="_blank" rel="noreferrer" className="text-xs px-3 py-1.5 rounded-lg bg-white/10 text-gray-300 hover:bg-white/20 transition-colors">
+                    GitHub Repository
+                  </a>
+                  <a href="https://blinkit-backend-9jtp.onrender.com/docs" target="_blank" rel="noreferrer" className="text-xs px-3 py-1.5 rounded-lg bg-white/10 text-gray-300 hover:bg-white/20 transition-colors">
+                    API Documentation
+                  </a>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

@@ -79,7 +79,12 @@ export default function Sidebar({ activeTab, onTabChange }: SidebarProps) {
 
       <div className="absolute bottom-0 left-0 right-0 p-2 border-t border-gray-700">
         <button
-          className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-colors text-gray-400 hover:bg-gray-700 hover:text-white`}
+          onClick={() => onTabChange('settings')}
+          className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${
+            activeTab === 'settings'
+              ? 'bg-gradient-to-r from-pink-500 via-purple-500 to-blue-500 text-white shadow-lg shadow-pink-500/30'
+              : 'text-gray-400 hover:bg-gray-700 hover:text-white'
+          }`}
           title={collapsed ? 'Settings' : ''}
         >
           <Settings size={20} />
