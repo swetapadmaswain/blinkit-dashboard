@@ -14,9 +14,9 @@ async def trigger_ingestion():
     google_error = None
     app_error = None
     
-    # Scrape Google Play reviews (fetch latest 500)
+    # Scrape Google Play reviews (fetch latest 5000)
     try:
-        google_play_reviews = scrape_google_play_reviews(count=500)
+        google_play_reviews = scrape_google_play_reviews(count=5000)
         google_count = 0
         for review in google_play_reviews:
             existing = db.raw_reviews.find_one({
@@ -47,7 +47,7 @@ async def trigger_ingestion():
     # Also scrape Blinkit Instant (second Google Play app)
     blinkit_instant_error = None
     try:
-        blinkit_instant_reviews = scrape_blinkit_instant(count=200)
+        blinkit_instant_reviews = scrape_blinkit_instant(count=5000)
         instant_count = 0
         for review in blinkit_instant_reviews:
             existing = db.raw_reviews.find_one({
