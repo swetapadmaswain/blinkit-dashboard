@@ -4,6 +4,7 @@ from app.tasks import scrape_google_play_task, scrape_app_store_task
 router = APIRouter()
 
 @router.post("/trigger")
+@router.get("/trigger")
 async def trigger_ingestion():
     """Trigger review ingestion from all sources"""
     # Trigger Google Play scraping
