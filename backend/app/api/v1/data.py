@@ -67,6 +67,49 @@ def build_segment_frustration_crosstab(db):
     ]
 
 
+def _build_barriers_insight(barriers, total_reviews, top_frustrations):
+    """Generate a meaningful, actionable barriers insight paragraph."""
+    if not barriers:
+        return "No barriers detected yet. Run ingestion to analyze customer pain points."
+
+    # Deduplicate barriers by type, keep highest severity
+    seen = {}
+    for b in barriers:
+        key = b['type']
+        if key not in seen or b['severity'] > seen[key]['severity']:
+            seen[key] = b
+    unique = sorted(seen.values(), key=lambda x: x['severity'], reverse=True)
+    top = unique[:3]
+
+    # Severity classification
+    critical = [b for b in unique if b['severity'] >= 7]
+    moderate = [b for b in unique if 4 <= b['severity'] < 7]
+
+    # Build narrative
+    parts = []
+    parts.append(
+        f"Across {total_reviews:,} reviews, {len(unique)} unique barrier types were identified."
+    )
+    if critical:
+        parts.append(
+            f" {len(critical)} are critical (severity 7+): "
+            + ", ".join(f"{b['type']} ({b['description'].lower()})" for b in critical[:3])
+            + "."
+        )
+    if top_frustrations:
+        top_frust = top_frustrations[0]
+        parts.append(
+            f" The most frequent frustration is '{top_frust['theme']}' with {top_frust['frequency']:,} mentions"
+            f" ({top_frust['impact']} impact)."
+        )
+    parts.append(
+        f" Priority recommendation: address '{top[0]['type']}' first"
+        f" (severity {top[0]['severity']}/10, affects {top[0]['platform']} users)"
+        f" to reduce churn and improve ratings."
+    )
+    return "".join(parts)
+
+
 router = APIRouter()
 
 @router.get("/dashboard")
@@ -239,7 +282,7 @@ async def get_dashboard_data():
         
         "question_answers": {
             "why_repeat_purchases": f"Users primarily repeat purchases due to habit formation ({user_segments.get('low_exploration', 20)}% low exploration), convenience-seeking ({user_segments.get('medium_exploration', 45)}% medium exploration), and active exploration ({user_segments.get('high_exploration', 35)}% high exploration)",
-            "barriers_to_exploration": f"Top barriers from {len(barriers)} detected: " + ", ".join(f"{b['type']} (severity {b['severity']})" for b in barriers[:4]) if barriers else "No barriers detected yet",
+            "barriers_to_exploration": _build_barriers_insight(barriers, raw_reviews_count, top_frustrations),
             "discovery_methods": "Users discover products through: App recommendations (45%), Search (30%), Social media (15%), Word of mouth (10%)",
             "habit_impact": f"Based on {raw_reviews_count} reviews, habits account for {user_segments.get('low_exploration', 20) + user_segments.get('medium_exploration', 45)}% of purchase behavior",
             "information_needs": "Before trying new categories, users need: Price comparison (42%), Quality reviews (38%), Usage examples (12%), Return policy (8%)",

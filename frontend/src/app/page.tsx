@@ -276,11 +276,11 @@ export default function Home() {
   const filteredReviewTotal = Math.round(dashboardData.data_aggregation.total_reviews * activityMatchRatio);
   const filteredSocialPostTotal = Math.round(dashboardData.data_aggregation.total_social_posts * activityMatchRatio);
 
-  const ratingChartData = [1, 2, 3, 4, 5]
-    .filter((rating) => rating >= filters.ratingRange[0] && rating <= filters.ratingRange[1])
-    .map((rating) => ({
-      name: `${rating}★`,
-      value: filteredRecentActivity.filter((activity) => activity.rating === rating).length,
+  const ratingChartData = dashboardData.behavioral_analysis.rating_distribution
+    .filter((item) => item.rating >= filters.ratingRange[0] && item.rating <= filters.ratingRange[1])
+    .map((item) => ({
+      name: `${item.rating}★`,
+      value: Math.round(item.count * activityMatchRatio),
     }));
 
   const platformChartData = dashboardData.data_aggregation.platform_distribution
