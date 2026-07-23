@@ -13,7 +13,7 @@ services:
           name: blinkit-postgres
           property: connectionString
       - key: mongodb_url
-        value: mongodb+srv://blinkit_admin:Z#if3uRQk_KH#9U>@cluster0.t9ajn7r.mongodb.net/?appName=Cluster0
+        value: mongodb+srv://blinkit_admin:Z%23if3uRQk_KH%239U@cluster0.t9ajn7r.mongodb.net/?appName=Cluster0
       - key: redis_url
         fromService:
           type: redis
